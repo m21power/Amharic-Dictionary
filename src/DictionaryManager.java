@@ -31,7 +31,7 @@ public class DictionaryManager {
 
     // Add a new word pair to the dictionary
     public static void addWord(String english, String description, String amharic) {
-        String query = "INSERT INTO dictionary (_id, EN,AMH) VALUES(?, ?, ?)";
+        String query = "INSERT INTO dictionary (_id, EN, AMH) VALUES(?, ?, ?)";
 
         try (Connection conn = SQLiteConnector.connect();
                 PreparedStatement pstmt = conn.prepareStatement(query)) {
@@ -70,20 +70,22 @@ public class DictionaryManager {
         }
     }
 
-    // Display all words in the dictionary
-    public static void displayAllWords() {
-        String query = "SELECT _id, AMH FROM dictionary";
+    // Return all words in the dictionary
+    public static String displayAllWords() {
+        StringBuilder content = new StringBuilder("English - Amharic Words:\n");
 
+        String query = "SELECT _id, AMH FROM dictionary";
         try (Connection conn = SQLiteConnector.connect();
                 Statement stmt = conn.createStatement();
                 ResultSet rs = stmt.executeQuery(query)) {
 
-            System.out.println("English - Amharic Words:");
             while (rs.next()) {
-                System.out.println(rs.getString("_id") + " - " + rs.getString("AMH"));
+                content.append(rs.getString("_id")).append(" - ").append(rs.getString("AMH")).append("\n");
             }
         } catch (SQLException e) {
-            System.err.println("Error displaying words: " + e.getMessage());
+            content.append("Error displaying words: ").append(e.getMessage());
         }
+
+        return content.toString();
     }
 }
