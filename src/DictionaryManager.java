@@ -8,7 +8,7 @@ public class DictionaryManager {
         if (isEnglishToAmharic) {
             query = "SELECT AMH FROM dictionary WHERE _id = ? COLLATE NOCASE";
         } else {
-            query = "SELECT EN FROM dictionary WHERE AMH = ?";
+            query = "SELECT _id FROM dictionary WHERE AMH = ?";
         }
         String result = "Translation not found";
 
@@ -28,6 +28,40 @@ public class DictionaryManager {
         }
         return result;
     }
+
+    // Retrieve words starting with a given prefix
+public static String getWordsStartingWith(String prefix, boolean isEnglish) {
+    StringBuilder result = new StringBuilder();
+    String query = null;
+
+    if (isEnglish) {
+        query = "SELECT _id FROM dictionary WHERE _id LIKE ? COLLATE NOCASE";
+    } else {
+        query = "SELECT AMH FROM dictionary WHERE AMH LIKE ?";
+    }
+
+    try (Connection conn = SQLiteConnector.connect();
+            PreparedStatement pstmt = conn.prepareStatement(query)) {
+
+        pstmt.setString(1, prefix.trim() + "%"); // '%' matches any number of characters
+        ResultSet rs = pstmt.executeQuery();
+
+        boolean found = false;
+        while (rs.next()) {
+            found = true;
+            result.append(rs.getString(1)).append("\n"); // Fetches the word
+        }
+
+        if (!found) {
+            result.append("No words found with the prefix: ").append(prefix);
+        }
+
+    } catch (SQLException e) {
+        result.append("Error retrieving words: ").append(e.getMessage());
+    }
+
+    return result.toString();
+}
 
     // Add a new word pair to the dictionary
     public static void addWord(String english, String description, String amharic) {

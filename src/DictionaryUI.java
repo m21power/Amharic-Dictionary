@@ -1,4 +1,6 @@
 import javax.swing.*;
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
 import java.awt.*;
 
 public class DictionaryUI {
@@ -15,20 +17,18 @@ public class DictionaryUI {
         JTextField translationField = new JTextField(20);
         JCheckBox isEnglishToAmharic = new JCheckBox("English to Amharic");
         JButton translateButton = new JButton("Translate");
-        JTextArea textArea = new JTextArea(10, 40); // reduced height for the area
         JButton displayButton = new JButton("Display All Words");
 
-        // Styling
-        inputLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
-        inputField.setMaximumSize(new Dimension(300, 30)); // limit input field size
-        translationLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
-        translationField.setMaximumSize(new Dimension(300, 30)); // limit translation field size
+        JLabel suggestionsLabel = new JLabel("Suggestions:");
+        DefaultListModel<String> suggestionsModel = new DefaultListModel<>();
+        JList<String> suggestionsList = new JList<>(suggestionsModel);
+        suggestionsList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+        suggestionsList.setVisibleRowCount(5);
+        JScrollPane suggestionsScrollPane = new JScrollPane(suggestionsList);
 
-        // Set margins and paddings for a compact layout
-        panel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
-        inputLabel.setBorder(BorderFactory.createEmptyBorder(5, 0, 5, 0));
-        translationLabel.setBorder(BorderFactory.createEmptyBorder(5, 0, 5, 0));
-        isEnglishToAmharic.setBorder(BorderFactory.createEmptyBorder(5, 0, 10, 0));
+        // Styling
+        inputField.setMaximumSize(new Dimension(300, 30));
+        translationField.setMaximumSize(new Dimension(300, 30));
 
         // Translate Button ActionListener
         translateButton.addActionListener(e -> {
@@ -41,8 +41,52 @@ public class DictionaryUI {
         // Display Button ActionListener
         displayButton.addActionListener(e -> {
             String wordsList = DictionaryManager.displayAllWords();
-            textArea.setText(wordsList);
-            JOptionPane.showMessageDialog(frame, new JScrollPane(textArea), "Dictionary", JOptionPane.INFORMATION_MESSAGE);
+            JOptionPane.showMessageDialog(frame, new JTextArea(wordsList), "Dictionary", JOptionPane.INFORMATION_MESSAGE);
+        });
+
+        // Add DocumentListener to inputField for suggestions
+        inputField.getDocument().addDocumentListener(new DocumentListener() {
+            private void updateSuggestions() {
+                String prefix = inputField.getText();
+                suggestionsModel.clear(); // Clear previous suggestions
+                if (!prefix.isEmpty()) {
+                    boolean isEnglish = isEnglishToAmharic.isSelected();
+                    String[] suggestions = DictionaryManager.getWordsStartingWith(prefix, isEnglish).split("\n");
+                    for (String suggestion : suggestions) {
+                        if (!suggestion.isEmpty()) {
+                            suggestionsModel.addElement(suggestion);
+                        }
+                    }
+                }
+            }
+
+            @Override
+            public void insertUpdate(DocumentEvent e) {
+                updateSuggestions();
+            }
+
+            @Override
+            public void removeUpdate(DocumentEvent e) {
+                updateSuggestions();
+            }
+
+            @Override
+            public void changedUpdate(DocumentEvent e) {
+                updateSuggestions();
+            }
+        });
+
+        // Add MouseListener to suggestionsList for click functionality
+        suggestionsList.addMouseListener(new java.awt.event.MouseAdapter() {
+            @Override
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                if (evt.getClickCount() == 2) { // Double-click event
+                    String selectedWord = suggestionsList.getSelectedValue();
+                    if (selectedWord != null) {
+                        inputField.setText(selectedWord);
+                    }
+                }
+            }
         });
 
         // Adding Components to Panel
@@ -53,14 +97,13 @@ public class DictionaryUI {
         panel.add(isEnglishToAmharic);
         panel.add(translateButton);
         panel.add(displayButton);
-
-        // Adding a text area for displaying words in a scrollable pane
-        panel.add(new JScrollPane(textArea));
+        panel.add(suggestionsLabel);
+        panel.add(suggestionsScrollPane);
 
         // Frame Settings
         frame.add(panel);
-        frame.setSize(400, 400); // Set a smaller window size for compactness
-        frame.setLocationRelativeTo(null); // Center the window
+        frame.setSize(500, 500); // Adjust window size
+        frame.setLocationRelativeTo(null);
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         frame.setVisible(true);
     }
